@@ -9,6 +9,8 @@ This repository now includes a working product tool in `index.html` that support
 - input-reactive recommendations (different signals produce different feature direction),
 - ranked opportunity scoring with matched-keyword evidence traceability,
 - confidence scoring with level + rationale based on evidence strength, signal volume, and score separation,
+- line-by-line signal diagnostics so each text line is visibly processed,
+- explicit action feedback for every button click,
 - generated UI/data/workflow changes and coding-agent delivery tasks,
 - vibe-coding prompt generation,
 - export to JSON/Markdown and local run history.

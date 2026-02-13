@@ -167,6 +167,18 @@
         gap: 8px;
         align-items: center;
       }
+      .table-scroll {
+        max-height: 320px;
+        overflow: auto;
+        border: 1px solid #334155;
+        border-radius: 8px;
+      }
+      .line-text {
+        max-width: 420px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
       footer {
         color: var(--muted);
         margin-top: 12px;
@@ -247,6 +259,7 @@ Q1 objective is activation and team planning velocity.
             <div class="small" id="topProblem">Run analysis to generate output.</div>
             <div class="chips" id="metaChips"></div>
             <div class="small" id="confidenceNote"></div>
+            <div class="small" id="actionNote">Last action: none</div>
           </article>
 
           <article class="card">
@@ -267,6 +280,25 @@ Q1 objective is activation and team planning velocity.
               </thead>
               <tbody id="rankingTable"></tbody>
             </table>
+          </article>
+
+          <article class="card">
+            <h3>Line-by-line response (all signals)</h3>
+            <div class="small" id="lineSummary">No lines processed yet.</div>
+            <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Signal line</th>
+                    <th>Top match</th>
+                    <th>Impact</th>
+                    <th>Keywords</th>
+                  </tr>
+                </thead>
+                <tbody id="signalTable"></tbody>
+              </table>
+            </div>
           </article>
 
           <article class="card">
@@ -314,6 +346,8 @@ Q1 objective is activation and team planning velocity.
       let latestResult = null;
       let isAnalyzing = false;
       let analysisRunCount = 0;
+      let queuedAnalyzeSource = null;
+      let actionCount = 0;
 
       const opportunities = [
         {
@@ -525,6 +559,22 @@ Q1 objective is activation and team planning velocity.
         document.getElementById("statusLine").textContent = message;
       }
 
+      function recordAction(action, detail) {
+        actionCount += 1;
+        const detailText = detail ? " — " + detail : "";
+        document.getElementById("actionNote").textContent =
+          "Last action #" + actionCount + ": " + action + detailText;
+      }
+
+      function escapeHtml(value) {
+        return String(value || "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/\"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      }
+
       function normalize(text) {
         return (text || "").toLowerCase();
       }
@@ -663,21 +713,26 @@ Q1 objective is activation and team planning velocity.
         return weight;
       }
 
+      function getHitsForOpportunity(signal, opp) {
+        const line = normalize(signal);
+        const lineTokens = new Set(tokenize(line));
+        const hints = OPPORTUNITY_HINTS[opp.id] || [];
+        const directHits = opp.keywords.filter((kw) => line.includes(kw.toLowerCase()));
+        const hintHits = hints.filter((hint) => line.includes(hint));
+        const tokenHits = opp.keywords.filter((kw) =>
+          tokenize(kw).some((token) => lineTokens.has(token)),
+        );
+        return Array.from(new Set([...directHits, ...hintHits, ...tokenHits]));
+      }
+
       function scoreOpportunity(opp, signals) {
         let score = 0;
         const evidence = [];
         const matched = new Set();
-        const hints = OPPORTUNITY_HINTS[opp.id] || [];
 
         signals.forEach((signal) => {
           const line = normalize(signal);
-          const lineTokens = new Set(tokenize(line));
-          const directHits = opp.keywords.filter((kw) => line.includes(kw.toLowerCase()));
-          const hintHits = hints.filter((hint) => line.includes(hint));
-          const tokenHits = opp.keywords.filter((kw) =>
-            tokenize(kw).some((token) => lineTokens.has(token)),
-          );
-          const hits = Array.from(new Set([...directHits, ...hintHits, ...tokenHits]));
+          const hits = getHitsForOpportunity(line, opp);
           if (!hits.length) return;
           hits.forEach((kw) => matched.add(kw));
           const weighted = hits.length * 3 + signalWeight(line);
@@ -799,6 +854,38 @@ Q1 objective is activation and team planning velocity.
           seen.add(signal);
         });
         return next;
+      }
+
+      function buildSignalDiagnostics(signals, ranking) {
+        const candidates = (ranking || []).slice(0, 3);
+        return signals.map((signal, index) => {
+          let best = {
+            name: "No direct match",
+            impact: Math.max(1, signalWeight(signal)),
+            keywords: [],
+          };
+
+          candidates.forEach((opp) => {
+            const hits = getHitsForOpportunity(signal, opp);
+            if (!hits.length) return;
+            const impact = hits.length * 3 + signalWeight(signal);
+            if (impact > best.impact || best.name === "No direct match") {
+              best = {
+                name: opp.name,
+                impact,
+                keywords: hits,
+              };
+            }
+          });
+
+          return {
+            lineNumber: index + 1,
+            signal,
+            topMatch: best.name,
+            impact: best.impact,
+            keywords: best.keywords,
+          };
+        });
       }
 
       function buildTasks(name, mode) {
@@ -932,6 +1019,40 @@ Q1 objective is activation and team planning velocity.
           .join("");
       }
 
+      function renderSignalDiagnostics(rows) {
+        const table = document.getElementById("signalTable");
+        if (!rows || !rows.length) {
+          table.innerHTML =
+            '<tr><td colspan="5" class="small">No lines to process yet.</td></tr>';
+          document.getElementById("lineSummary").textContent = "No lines processed yet.";
+          return;
+        }
+        table.innerHTML = rows
+          .map((row) => {
+            const keywords = row.keywords && row.keywords.length
+              ? row.keywords.slice(0, 6).join(", ")
+              : "processed";
+            return (
+              "<tr><td>" +
+              row.lineNumber +
+              "</td><td class=\"line-text\" title=\"" +
+              escapeHtml(row.signal) +
+              "\">" +
+              escapeHtml(row.signal) +
+              "</td><td>" +
+              escapeHtml(row.topMatch) +
+              "</td><td>" +
+              row.impact +
+              "</td><td>" +
+              escapeHtml(keywords) +
+              "</td></tr>"
+            );
+          })
+          .join("");
+        document.getElementById("lineSummary").textContent =
+          rows.length + " lines processed and scored.";
+      }
+
       function downloadText(filename, text, type) {
         const blob = new Blob([text], { type: type || "text/plain;charset=utf-8" });
         const url = URL.createObjectURL(blob);
@@ -1029,6 +1150,7 @@ Q1 objective is activation and team planning velocity.
         renderList("dataChanges", top.data);
         renderList("workflowChanges", top.workflow);
         renderList("taskList", top.tasks);
+        renderSignalDiagnostics(payload.signalDiagnostics || []);
         document.getElementById("promptOutput").textContent = payload.prompt;
       }
 
@@ -1043,6 +1165,7 @@ Q1 objective is activation and team planning velocity.
           "- Confidence: " + payload.confidence + "% (" + (payload.confidenceLabel || "n/a") + ")",
           "- Confidence basis: " + (payload.confidenceReasons && payload.confidenceReasons.length ? payload.confidenceReasons.join(", ") : "n/a"),
           "- Themes: " + (payload.themes && payload.themes.length ? payload.themes.join(", ") : "n/a"),
+          "- Signal lines processed: " + (payload.signalDiagnostics ? payload.signalDiagnostics.length : payload.signalCount),
           "",
           "## Recommended Feature",
           top.name,
@@ -1072,9 +1195,12 @@ Q1 objective is activation and team planning velocity.
         ].join("\n");
       }
 
-      async function analyze() {
+      async function analyze(source) {
+        const requestedBy = source || "manual";
         if (isAnalyzing) {
-          status("Still processing previous analysis...");
+          queuedAnalyzeSource = requestedBy;
+          status("Analysis queued (" + requestedBy + ") while current run finishes.");
+          recordAction("Analyze queued", requestedBy);
           return;
         }
 
@@ -1083,6 +1209,7 @@ Q1 objective is activation and team planning velocity.
         isAnalyzing = true;
         analyzeButton.disabled = true;
         analyzeButton.textContent = "Analyzing...";
+        recordAction("Analyze started", requestedBy);
 
         try {
           const question =
@@ -1106,6 +1233,7 @@ Q1 objective is activation and team planning velocity.
           const signals = [...interviews, ...usage, ...market, ...uploadedSignals];
           if (!signals.length) {
             status("No signals found. Add text or upload files.");
+            recordAction("Analyze completed", "0 lines");
             return;
           }
 
@@ -1127,6 +1255,7 @@ Q1 objective is activation and team planning velocity.
           top.evidence = ensureEvidenceCoverage(top.evidence, signals, themes);
           top.tasks = buildTasks(top.name, mode);
           const confidence = computeConfidence(top, ranking, signals, themes, matchedEvidence);
+          const signalDiagnostics = buildSignalDiagnostics(signals, ranking);
           const timestamp = new Date().toLocaleString();
           const prompt = buildPrompt(top, mode, question);
 
@@ -1140,6 +1269,7 @@ Q1 objective is activation and team planning velocity.
             confidenceReasons: confidence.reasons,
             themes,
             top,
+            signalDiagnostics,
             ranking: ranking.slice(0, 6).map((item) => ({
               name: item.name,
               score: item.score,
@@ -1164,12 +1294,25 @@ Q1 objective is activation and team planning velocity.
               analysisRunCount +
               " at " +
               new Date().toLocaleTimeString() +
+              ", source: " +
+              requestedBy +
               ").",
           );
+          recordAction("Analyze completed", signals.length + " lines processed");
         } finally {
           isAnalyzing = false;
           analyzeButton.disabled = false;
           analyzeButton.textContent = initialButtonText;
+          if (queuedAnalyzeSource) {
+            const replaySource = queuedAnalyzeSource;
+            queuedAnalyzeSource = null;
+            setTimeout(() => {
+              analyze(replaySource).catch((error) => {
+                status("Failed to analyze: " + error.message);
+                recordAction("Analyze failed", error.message);
+              });
+            }, 0);
+          }
         }
       }
 
@@ -1181,36 +1324,41 @@ Q1 objective is activation and team planning velocity.
         };
       }
 
-      const scheduleAnalyze = debounce(() => {
-        analyze().catch((error) => {
+      function requestAnalyze(source) {
+        analyze(source).catch((error) => {
           status("Failed to analyze: " + error.message);
+          recordAction("Analyze failed", error.message);
         });
+      }
+
+      const scheduleAnalyze = debounce((source) => {
+        requestAnalyze(source || "auto-input");
       }, 450);
 
       ["question", "interviews", "usage", "market"].forEach((id) => {
         document.getElementById(id).addEventListener("input", () => {
           status("Input updated. Re-analyzing...");
-          scheduleAnalyze();
+          scheduleAnalyze("typing-" + id);
         });
       });
       document.getElementById("mode").addEventListener("change", () => {
         status("Mode changed. Re-analyzing...");
-        scheduleAnalyze();
+        scheduleAnalyze("mode-change");
       });
       document.getElementById("uploads").addEventListener("change", () => {
+        const fileCount = (document.getElementById("uploads").files || []).length;
+        recordAction("Upload changed", fileCount + " file(s)");
         status("Files added. Re-analyzing...");
-        analyze().catch((error) => {
-          status("Failed to analyze: " + error.message);
-        });
+        requestAnalyze("file-upload");
       });
 
       document.getElementById("analyzeBtn").addEventListener("click", () => {
-        analyze().catch((error) => {
-          status("Failed to analyze: " + error.message);
-        });
+        recordAction("Analyze clicked", "manual");
+        requestAnalyze("analyze-button");
       });
 
       document.getElementById("exportJsonBtn").addEventListener("click", () => {
+        recordAction("Export JSON clicked", latestResult ? "ready" : "no-result");
         if (!latestResult) {
           status("Generate a recommendation before exporting.");
           return;
@@ -1224,6 +1372,7 @@ Q1 objective is activation and team planning velocity.
       });
 
       document.getElementById("exportMdBtn").addEventListener("click", () => {
+        recordAction("Export Markdown clicked", latestResult ? "ready" : "no-result");
         if (!latestResult) {
           status("Generate a recommendation before exporting.");
           return;
@@ -1239,19 +1388,20 @@ Q1 objective is activation and team planning velocity.
       document.getElementById("historyList").addEventListener("click", (event) => {
         const loadIndex = event.target.getAttribute("data-load");
         if (loadIndex === null) return;
+        recordAction("History load clicked", "entry " + (Number(loadIndex) + 1));
         loadHistory(Number(loadIndex));
       });
 
       document.getElementById("clearHistoryBtn").addEventListener("click", () => {
+        recordAction("Clear history clicked");
         localStorage.removeItem(HISTORY_KEY);
         renderHistory();
         status("Cleared saved history.");
       });
 
       renderHistory();
-      analyze().catch((error) => {
-        status("Failed to run initial analysis: " + error.message);
-      });
+      renderSignalDiagnostics([]);
+      requestAnalyze("initial-load");
     </script>
   </body>
 </html>
