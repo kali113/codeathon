@@ -11,14 +11,17 @@ This repository now includes a working product tool in `index.html` that support
 - confidence scoring with level + rationale based on evidence strength, signal volume, and score separation,
 - line-by-line signal diagnostics so each text line is visibly processed,
 - explicit action feedback for every button click,
+- multi-provider AI model router with rate-limit failover and mode-based routing,
+- structured AI context system for stronger recommendation prompts,
 - generated UI/data/workflow changes and coding-agent delivery tasks,
 - vibe-coding prompt generation,
 - export to JSON/Markdown and local run history.
 
 ## Run locally
-1. From this folder, run: `python -m http.server 8000`
-2. Open: `http://localhost:8000`
-3. Add or upload signals and click **Analyze and recommend**
+1. Copy `.env.example` to `.env.local` and set your provider keys (do not commit real keys).
+2. From this folder, run: `npm start`
+3. Open: `http://localhost:3000`
+4. Add or upload signals and click **Analyze and recommend**
 
 Over the last few years, we've seen an explosion of AI tools for writing code. Cursor and Claude Code are great at helping teams build software once it's clear what needs to be built.
 

@@ -716,10 +716,15 @@ Q1 objective is activation and team planning velocity.
       function getHitsForOpportunity(signal, opp) {
         const line = normalize(signal);
         const lineTokens = new Set(tokenize(line));
-        const hints = OPPORTUNITY_HINTS[opp.id] || [];
-        const directHits = opp.keywords.filter((kw) => line.includes(kw.toLowerCase()));
+        const hints = OPPORTUNITY_HINTS[opp && opp.id] || [];
+        const keywords = Array.isArray(opp && opp.keywords)
+          ? opp.keywords
+          : Array.isArray(opp && opp.matchedKeywords)
+            ? opp.matchedKeywords
+            : [];
+        const directHits = keywords.filter((kw) => line.includes(String(kw).toLowerCase()));
         const hintHits = hints.filter((hint) => line.includes(hint));
-        const tokenHits = opp.keywords.filter((kw) =>
+        const tokenHits = keywords.filter((kw) =>
           tokenize(kw).some((token) => lineTokens.has(token)),
         );
         return Array.from(new Set([...directHits, ...hintHits, ...tokenHits]));
@@ -1118,6 +1123,9 @@ Q1 objective is activation and team planning velocity.
         const top = payload.top;
         document.getElementById("topName").textContent = top.name;
         document.getElementById("topProblem").textContent = top.problem;
+        const providerChip = payload.aiProvider
+          ? '<span class="chip">Provider: ' + escapeHtml(payload.aiProvider) + "</span>"
+          : '<span class="chip">Provider: local-fallback</span>';
         const themeChip = payload.themes && payload.themes.length
           ? '<span class="chip">Themes: ' + payload.themes.slice(0, 3).join(", ") + "</span>"
           : "";
@@ -1133,11 +1141,16 @@ Q1 objective is activation and team planning velocity.
           '<span class="chip">Mode: ' +
           payload.mode +
           "</span>" +
+          providerChip +
           themeChip;
-        document.getElementById("confidenceNote").textContent =
+        const confidenceText =
           payload.confidenceReasons && payload.confidenceReasons.length
             ? "Confidence basis: " + payload.confidenceReasons.join(" | ")
             : "";
+        const fallbackText = payload.aiFallbackReason
+          ? " | AI fallback reason: " + payload.aiFallbackReason
+          : "";
+        document.getElementById("confidenceNote").textContent = confidenceText + fallbackText;
 
         renderList(
           "evidenceList",
@@ -1162,6 +1175,7 @@ Q1 objective is activation and team planning velocity.
           "- Timestamp: " + payload.timestamp,
           "- Question: " + payload.question,
           "- Mode: " + payload.mode,
+          "- Provider: " + (payload.aiProvider || "local-fallback"),
           "- Confidence: " + payload.confidence + "% (" + (payload.confidenceLabel || "n/a") + ")",
           "- Confidence basis: " + (payload.confidenceReasons && payload.confidenceReasons.length ? payload.confidenceReasons.join(", ") : "n/a"),
           "- Themes: " + (payload.themes && payload.themes.length ? payload.themes.join(", ") : "n/a"),
@@ -1193,6 +1207,108 @@ Q1 objective is activation and team planning velocity.
           payload.prompt,
           "```",
         ].join("\n");
+      }
+
+      function normalizeTextArray(values, fallback, maxItems) {
+        if (!Array.isArray(values)) return fallback.slice(0, maxItems);
+        const normalized = values
+          .map((value) => String(value || "").trim())
+          .filter(Boolean)
+          .slice(0, maxItems);
+        return normalized.length ? normalized : fallback.slice(0, maxItems);
+      }
+
+      function getApiTargets() {
+        const targets = [];
+        if (window.location && /^https?:$/i.test(window.location.protocol)) {
+          targets.push(window.location.origin);
+        }
+        targets.push("http://localhost:3000");
+        return Array.from(new Set(targets));
+      }
+
+      function sanitizeAIRecommendation(raw, fallbackTop, themes) {
+        const rec = raw && typeof raw === "object" ? raw : {};
+        const safeThemes = normalizeTextArray(rec.themes, themes || [], 6);
+        const safeEvidence = normalizeTextArray(
+          rec.evidence,
+          (fallbackTop.evidence || []).map((item) => item.text || item),
+          10,
+        );
+        const safeConfidence = Number.isFinite(Number(rec.confidence))
+          ? Math.min(99, Math.max(1, Math.round(Number(rec.confidence))))
+          : null;
+        const safeScore = Number.isFinite(Number(rec.score))
+          ? Math.max(1, Math.round(Number(rec.score)))
+          : null;
+
+        return {
+          name: String(rec.name || "").trim() || fallbackTop.name,
+          problem: String(rec.problem || "").trim() || fallbackTop.problem,
+          ui: normalizeTextArray(rec.ui, fallbackTop.ui || [], 8),
+          data: normalizeTextArray(rec.data, fallbackTop.data || [], 8),
+          workflow: normalizeTextArray(rec.workflow, fallbackTop.workflow || [], 8),
+          tasks: normalizeTextArray(rec.tasks, fallbackTop.tasks || [], 10),
+          themes: safeThemes,
+          evidence: safeEvidence,
+          confidence: safeConfidence,
+          score: safeScore,
+        };
+      }
+
+      async function requestAIRecommendation(input) {
+        if (typeof fetch !== "function") {
+          return {
+            ok: false,
+            error: "AI router fetch unavailable in this runtime.",
+          };
+        }
+        const targets = getApiTargets();
+        let lastError = "AI router unavailable.";
+
+        for (const baseUrl of targets) {
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 12000);
+          try {
+            const response = await fetch(baseUrl.replace(/\/+$/, "") + "/api/recommend", {
+              method: "POST",
+              headers: {
+                "content-type": "application/json",
+              },
+              body: JSON.stringify({
+                question: input.question,
+                mode: input.mode,
+                signals: input.signals,
+                history: input.history || [],
+              }),
+              signal: controller.signal,
+            });
+            clearTimeout(timeout);
+            if (!response.ok) {
+              const text = await response.text();
+              lastError = "HTTP " + response.status + " from " + baseUrl + ": " + text;
+              continue;
+            }
+            const data = await response.json();
+            if (!data || !data.ok || !data.recommendation) {
+              lastError = "Invalid AI response from " + baseUrl;
+              continue;
+            }
+            return {
+              ok: true,
+              baseUrl,
+              data,
+            };
+          } catch (error) {
+            clearTimeout(timeout);
+            lastError = (error && error.message) || "Unknown request error";
+          }
+        }
+
+        return {
+          ok: false,
+          error: lastError,
+        };
       }
 
       async function analyze(source) {
@@ -1254,7 +1370,76 @@ Q1 objective is activation and team planning velocity.
           const matchedEvidence = [...top.evidence];
           top.evidence = ensureEvidenceCoverage(top.evidence, signals, themes);
           top.tasks = buildTasks(top.name, mode);
-          const confidence = computeConfidence(top, ranking, signals, themes, matchedEvidence);
+          let aiProvider = null;
+          let aiModel = null;
+          let aiRouteMode = null;
+          let aiUsed = false;
+          let aiError = "";
+
+          const aiAttempt = await requestAIRecommendation({
+            question,
+            mode,
+            signals,
+            history: getHistory(),
+          });
+          if (aiAttempt.ok) {
+            const aiData = aiAttempt.data;
+            const aiRecommendation = sanitizeAIRecommendation(aiData.recommendation, top, themes);
+
+            top.name = aiRecommendation.name;
+            top.problem = aiRecommendation.problem;
+            top.ui = aiRecommendation.ui;
+            top.data = aiRecommendation.data;
+            top.workflow = aiRecommendation.workflow;
+            top.tasks = aiRecommendation.tasks;
+            top.matchedKeywords = aiRecommendation.themes.length
+              ? aiRecommendation.themes
+              : top.matchedKeywords;
+            top.evidence = aiRecommendation.evidence.map((line) => ({
+              text: line,
+              keywords: aiRecommendation.themes.slice(0, 3),
+              weighted: 2,
+            }));
+            top.score = aiRecommendation.score || Math.max(top.score, 14 + top.evidence.length * 2);
+
+            ranking = [
+              {
+                id: top.id || "ai-top",
+                name: top.name,
+                score: top.score,
+                evidence: top.evidence,
+                matchedKeywords: top.matchedKeywords,
+                keywords: top.matchedKeywords,
+              },
+              ...ranking.slice(1),
+            ];
+
+            aiUsed = true;
+            aiProvider = aiData.provider || "unknown";
+            aiModel = aiData.model || "unknown";
+            aiRouteMode = aiData.mode || mode;
+            if (Number.isFinite(aiRecommendation.confidence)) {
+              top.aiConfidence = aiRecommendation.confidence;
+            }
+            recordAction("AI router response", aiProvider + " / " + aiModel);
+          } else {
+            aiError = aiAttempt.error || "AI router unavailable";
+            recordAction("AI router fallback", aiError.slice(0, 80));
+          }
+
+          let confidence = computeConfidence(top, ranking, signals, themes, matchedEvidence);
+          if (Number.isFinite(top.aiConfidence)) {
+            const aiScore = Math.min(99, Math.max(1, Math.round(top.aiConfidence)));
+            confidence = {
+              ...confidence,
+              score: aiScore,
+              label: getConfidenceLabel(aiScore),
+              reasons: [
+                "AI provider confidence " + aiScore + "%",
+                ...(confidence.reasons || []),
+              ].slice(0, 4),
+            };
+          }
           const signalDiagnostics = buildSignalDiagnostics(signals, ranking);
           const timestamp = new Date().toLocaleString();
           const prompt = buildPrompt(top, mode, question);
@@ -1270,6 +1455,10 @@ Q1 objective is activation and team planning velocity.
             themes,
             top,
             signalDiagnostics,
+            aiProvider,
+            aiModel,
+            aiRouteMode,
+            aiFallbackReason: aiUsed ? "" : aiError,
             ranking: ranking.slice(0, 6).map((item) => ({
               name: item.name,
               score: item.score,
@@ -1296,7 +1485,10 @@ Q1 objective is activation and team planning velocity.
               new Date().toLocaleTimeString() +
               ", source: " +
               requestedBy +
-              ").",
+              (aiUsed
+                ? ", provider: " + aiProvider + "/" + aiModel + "."
+                : ", local fallback." + (aiError ? " (" + aiError + ")" : "")) +
+              ")",
           );
           recordAction("Analyze completed", signals.length + " lines processed");
         } finally {

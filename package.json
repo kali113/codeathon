@@ -1,0 +1,13 @@
+{
+  "name": "cursor-for-product-managers",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Local AI-native PM recommendation tool with model router failover",
+  "scripts": {
+    "start": "node server.js",
+    "start:dev": "node server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
