@@ -3,12 +3,13 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Cursor for Product Managers — MVP</title>
+    <title>Cursor for Product Managers — Working Tool</title>
     <style>
       :root {
-        --bg: #0f172a;
+        --bg: #0b1220;
         --panel: #111827;
-        --card: #1f2937;
+        --panel-2: #1f2937;
+        --line: #334155;
         --text: #e5e7eb;
         --muted: #9ca3af;
         --accent: #22d3ee;
@@ -19,103 +20,162 @@
       body {
         margin: 0;
         font-family: Inter, Segoe UI, Arial, Helvetica, sans-serif;
-        background: linear-gradient(180deg, #020617, #0f172a);
+        background: linear-gradient(180deg, #020617 0%, #0b1220 100%);
         color: var(--text);
       }
       .wrap {
-        max-width: 1200px;
+        max-width: 1320px;
         margin: 0 auto;
-        padding: 24px 16px 40px;
+        padding: 22px 16px 32px;
       }
       h1 {
         margin: 0 0 8px;
         font-size: 2rem;
       }
       .subtitle {
-        margin: 0 0 20px;
+        margin: 0 0 14px;
         color: var(--muted);
       }
-      .grid {
+      .status {
+        margin: 0 0 18px;
+        color: var(--accent);
+        font-size: 0.95rem;
+      }
+      .layout {
         display: grid;
         gap: 16px;
       }
-      @media (min-width: 980px) {
-        .grid {
-          grid-template-columns: 1fr 1fr;
+      @media (min-width: 1100px) {
+        .layout {
+          grid-template-columns: 420px 1fr;
         }
       }
-      .card {
-        background: rgba(17, 24, 39, 0.9);
-        border: 1px solid #374151;
+      .panel {
+        background: rgba(17, 24, 39, 0.92);
+        border: 1px solid var(--line);
         border-radius: 12px;
-        padding: 16px;
+        padding: 14px;
       }
-      .card h2 {
-        margin: 0 0 12px;
-        font-size: 1.1rem;
+      .panel h2 {
+        margin: 0 0 10px;
+        font-size: 1.05rem;
       }
       label {
         display: block;
-        margin: 12px 0 6px;
+        margin: 10px 0 6px;
         font-weight: 600;
       }
       textarea,
-      select {
+      input[type="text"],
+      select,
+      input[type="file"] {
         width: 100%;
-        border: 1px solid #4b5563;
-        border-radius: 8px;
-        background: #111827;
         color: var(--text);
+        background: #0f172a;
+        border: 1px solid #475569;
+        border-radius: 8px;
         padding: 10px;
       }
       textarea {
-        min-height: 96px;
+        min-height: 88px;
         resize: vertical;
+      }
+      .btn-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 12px;
       }
       button {
         border: 0;
         border-radius: 8px;
-        background: var(--accent);
-        color: #03131a;
+        padding: 9px 12px;
         font-weight: 700;
-        padding: 10px 14px;
         cursor: pointer;
-        margin-top: 14px;
       }
-      .result-title {
-        margin: 0;
+      .btn-primary {
+        background: var(--accent);
+        color: #06232b;
+      }
+      .btn-secondary {
+        background: #0f172a;
+        color: var(--text);
+        border: 1px solid #475569;
+      }
+      .result-grid {
+        display: grid;
+        gap: 12px;
+      }
+      .card {
+        background: rgba(31, 41, 55, 0.9);
+        border: 1px solid #475569;
+        border-radius: 10px;
+        padding: 12px;
+      }
+      .card h3 {
+        margin: 0 0 8px;
         color: var(--accent);
       }
-      .pill {
-        display: inline-block;
-        border: 1px solid #4b5563;
-        border-radius: 999px;
-        padding: 4px 10px;
+      .small {
         color: var(--muted);
-        margin: 4px 6px 0 0;
-        font-size: 12px;
+        font-size: 0.92rem;
       }
       ul {
-        margin: 8px 0;
+        margin: 8px 0 0;
         padding-left: 20px;
       }
       pre {
         white-space: pre-wrap;
+        margin: 8px 0 0;
         background: #020617;
         border: 1px solid #334155;
         border-radius: 8px;
         padding: 12px;
-        margin: 8px 0 0;
       }
-      .row {
-        margin-top: 12px;
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.93rem;
       }
-      .muted {
-        color: var(--muted);
+      th,
+      td {
+        border-bottom: 1px solid #374151;
+        text-align: left;
+        padding: 8px 6px;
+      }
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+      .chip {
+        background: #0f172a;
+        border: 1px solid #475569;
+        color: #cbd5e1;
+        border-radius: 999px;
+        padding: 3px 9px;
+        font-size: 12px;
+      }
+      .history-item {
+        margin-top: 8px;
+        padding: 8px;
+        border: 1px solid #374151;
+        border-radius: 8px;
+        background: #0f172a;
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        align-items: center;
       }
       footer {
-        margin-top: 16px;
         color: var(--muted);
+        margin-top: 12px;
+      }
+      code {
+        background: #020617;
+        border: 1px solid #334155;
+        border-radius: 5px;
+        padding: 1px 6px;
       }
     </style>
   </head>
@@ -123,30 +183,44 @@
     <div class="wrap">
       <h1>Cursor for Product Managers</h1>
       <p class="subtitle">
-        MVP project: upload customer signal, ask what to build next, and get a
-        product spec + coding-agent task plan with vibe-coding prompts.
+        Working local tool for PM discovery + vibe-coding handoff.
+      </p>
+      <p class="status" id="statusLine">
+        Ready. Add signals and click "Analyze and recommend".
       </p>
 
-      <div class="grid">
-        <section class="card">
-          <h2>1) Discovery Inputs</h2>
-          <label for="interviews">Customer interviews</label>
+      <div class="layout">
+        <section class="panel">
+          <h2>Inputs</h2>
+
+          <label for="question">Question</label>
+          <input
+            id="question"
+            type="text"
+            value="What should we build next?"
+            placeholder="What should we build next?"
+          />
+
+          <label for="interviews">Customer interviews (one signal per line)</label>
           <textarea id="interviews">
-Users say onboarding takes too long and they do not know the first action.
-Power users ask for faster collaboration loops in planning sessions.</textarea
-          >
+Users are confused in onboarding and fail to create their first project.
+Enterprise team says setup needs better guided steps.
+          </textarea>
 
-          <label for="usage">Usage data signals</label>
+          <label for="usage">Usage and product analytics signals</label>
           <textarea id="usage">
-42% of new users leave before creating their first project.
-Teams with shared templates retain 2x longer than teams without templates.</textarea
-          >
+45% drop off before first successful project.
+Teams using shared planning templates are retained 2.1x longer.
+          </textarea>
 
-          <label for="market">Market and strategy context</label>
+          <label for="market">Market and strategy notes</label>
           <textarea id="market">
-Competitors win on fast setup and guided workflows.
-Goal for Q1 is activation and collaborative planning velocity.</textarea
-          >
+Competitors emphasize fast activation and guided templates.
+Q1 objective is activation and team planning velocity.
+          </textarea>
+
+          <label for="uploads">Upload extra evidence (.txt, .md, .csv, .json)</label>
+          <input id="uploads" type="file" multiple />
 
           <label for="mode">Vibe coding mode</label>
           <select id="mode">
@@ -155,177 +229,606 @@ Goal for Q1 is activation and collaborative planning velocity.</textarea
             <option value="fast">Fast / prototype-first</option>
           </select>
 
-          <button id="generateBtn">Generate next feature</button>
+          <div class="btn-row">
+            <button class="btn-primary" id="analyzeBtn">
+              Analyze and recommend
+            </button>
+            <button class="btn-secondary" id="exportJsonBtn">Export JSON</button>
+            <button class="btn-secondary" id="exportMdBtn">Export Markdown</button>
+            <button class="btn-secondary" id="clearHistoryBtn">
+              Clear history
+            </button>
+          </div>
         </section>
 
-        <section class="card">
-          <h2>2) Generated Product Direction</h2>
-          <h3 class="result-title" id="featureName">No feature generated yet</h3>
-          <p class="muted" id="problem"></p>
+        <section class="result-grid">
+          <article class="card">
+            <h3 id="topName">No recommendation generated</h3>
+            <div class="small" id="topProblem">Run analysis to generate output.</div>
+            <div class="chips" id="metaChips"></div>
+          </article>
 
-          <div class="row">
-            <strong>Why this now</strong>
-            <ul id="whyNow"></ul>
-          </div>
+          <article class="card">
+            <h3>Top recommendation evidence</h3>
+            <ul id="evidenceList"></ul>
+          </article>
 
-          <div class="row">
-            <strong>Proposed changes</strong>
-            <div id="changes"></div>
-          </div>
+          <article class="card">
+            <h3>Opportunity ranking</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>Opportunity</th>
+                  <th>Score</th>
+                  <th>Evidence</th>
+                  <th>Matched keywords</th>
+                </tr>
+              </thead>
+              <tbody id="rankingTable"></tbody>
+            </table>
+          </article>
 
-          <div class="row">
-            <strong>Coding-agent tasks</strong>
-            <ul id="tasks"></ul>
-          </div>
+          <article class="card">
+            <h3>Proposed product changes</h3>
+            <div>
+              <strong>UI</strong>
+              <ul id="uiChanges"></ul>
+            </div>
+            <div>
+              <strong>Data model</strong>
+              <ul id="dataChanges"></ul>
+            </div>
+            <div>
+              <strong>Workflow</strong>
+              <ul id="workflowChanges"></ul>
+            </div>
+          </article>
+
+          <article class="card">
+            <h3>Coding-agent delivery plan</h3>
+            <ul id="taskList"></ul>
+          </article>
+
+          <article class="card">
+            <h3>Vibe coding prompt</h3>
+            <pre id="promptOutput">Run analysis to generate prompt.</pre>
+          </article>
+
+          <article class="card">
+            <h3>Saved runs</h3>
+            <div class="small">Stored in browser localStorage.</div>
+            <div id="historyList"></div>
+          </article>
         </section>
       </div>
 
-      <section class="card" style="margin-top: 16px">
-        <h2>3) Vibe Coding Prompt</h2>
-        <p class="muted">
-          Use this directly with your coding agent for rapid prototype loops.
-        </p>
-        <pre id="promptOutput">Generate a feature first to create a prompt.</pre>
-      </section>
-
       <footer>
-        Local run: <code>python -m http.server 8000</code> and open
+        Run locally: <code>python -m http.server 8000</code> and open
         <code>http://localhost:8000</code>.
       </footer>
     </div>
 
     <script>
-      const templates = {
-        onboarding: {
-          name: "Guided First Project Builder",
-          problem:
-            "New users churn before activation because first value is unclear.",
-          ui: ["Interactive checklist on first login", "Contextual next-step CTA"],
-          data: ["onboarding_steps", "activation_progress_events"],
-          workflow: ["Interview -> setup wizard -> first shared artifact"],
-        },
-        collaboration: {
-          name: "Live Planning Co-Pilot",
-          problem:
-            "Teams need faster shared planning loops with fewer handoff delays.",
-          ui: ["Shared planning room", "Inline AI suggestions per section"],
-          data: ["room_sessions", "suggestion_acceptance_events"],
-          workflow: ["Draft -> review live -> approve implementation tasks"],
-        },
-        analytics: {
-          name: "PM Insight Dashboard",
-          problem:
-            "Product teams cannot quickly connect customer feedback with usage trends.",
-          ui: ["Signal trend board", "Issue-to-metric evidence panel"],
-          data: ["signal_clusters", "opportunity_scores"],
-          workflow: ["Ingest signals -> score opportunities -> decide sprint focus"],
-        },
-      };
+      const HISTORY_KEY = "cursor_pm_runs_v2";
+      let latestResult = null;
 
-      function splitSignals(text) {
-        return text
-          .split(/\n+/)
+      const opportunities = [
+        {
+          id: "guided-activation",
+          name: "Guided Activation Journey",
+          problem:
+            "New users churn before first value because setup and first action are unclear.",
+          keywords: [
+            "onboarding",
+            "activation",
+            "first project",
+            "first action",
+            "setup",
+            "drop off",
+            "churn",
+            "confused",
+            "empty state",
+          ],
+          ui: [
+            "Multi-step onboarding checklist anchored to first project completion",
+            "Context-aware CTA on empty states",
+          ],
+          data: [
+            "activation_funnel_events",
+            "onboarding_step_completion",
+            "time_to_first_project",
+          ],
+          workflow: [
+            "New signup -> role selection -> guided setup -> first project completion",
+          ],
+        },
+        {
+          id: "collab-copilot",
+          name: "Live Planning Collaboration Copilot",
+          problem:
+            "Teams lose momentum due to fragmented planning and weak collaboration loops.",
+          keywords: [
+            "team",
+            "collaboration",
+            "shared",
+            "handoff",
+            "planning",
+            "review",
+            "alignment",
+            "comment",
+            "async",
+          ],
+          ui: [
+            "Shared planning workspace with live cursor presence",
+            "Inline AI suggestions for each planning section",
+          ],
+          data: [
+            "session_participants",
+            "suggestion_acceptance_rate",
+            "decision_cycle_time",
+          ],
+          workflow: [
+            "Draft plan -> team review -> AI suggested edits -> approval -> task generation",
+          ],
+        },
+        {
+          id: "insight-graph",
+          name: "Customer Signal Insight Graph",
+          problem:
+            "PMs cannot quickly connect qualitative feedback and usage metrics to decisions.",
+          keywords: [
+            "insight",
+            "analytics",
+            "usage",
+            "metric",
+            "dashboard",
+            "feedback",
+            "trend",
+            "evidence",
+            "data",
+          ],
+          ui: [
+            "Opportunity board with evidence drill-down",
+            "Trend chart for issue clusters and impact over time",
+          ],
+          data: [
+            "signal_clusters",
+            "opportunity_scores",
+            "evidence_to_metric_links",
+          ],
+          workflow: [
+            "Ingest signals -> cluster themes -> score opportunities -> decide sprint priority",
+          ],
+        },
+        {
+          id: "quality-guardrails",
+          name: "Release Quality Guardrails",
+          problem:
+            "Reliability issues reduce trust and slow adoption in production teams.",
+          keywords: [
+            "bug",
+            "error",
+            "crash",
+            "performance",
+            "latency",
+            "reliability",
+            "quality",
+            "failure",
+            "incident",
+          ],
+          ui: [
+            "Release risk panel for PM and engineering review",
+            "Quality checklist integrated into launch workflow",
+          ],
+          data: [
+            "defect_density",
+            "incident_frequency",
+            "release_risk_score",
+          ],
+          workflow: [
+            "Spec complete -> quality gate checks -> launch decision -> post-release audit",
+          ],
+        },
+      ];
+
+      function status(message) {
+        document.getElementById("statusLine").textContent = message;
+      }
+
+      function normalize(text) {
+        return (text || "").toLowerCase();
+      }
+
+      function splitIntoSignals(text, prefix) {
+        return (text || "")
+          .split(/\r?\n/)
           .map((line) => line.trim())
-          .filter(Boolean);
+          .filter(Boolean)
+          .map((line) => (prefix ? prefix + ": " + line : line));
       }
 
-      function detectTheme(allText) {
-        const text = allText.toLowerCase();
-        const scores = {
-          onboarding: (text.match(/onboarding|activate|first/i) || []).length,
-          collaboration: (text.match(/collab|team|shared|planning/i) || []).length,
-          analytics: (text.match(/metric|data|insight|dashboard|trend/i) || [])
-            .length,
+      function gatherJsonStrings(node, bucket) {
+        if (typeof node === "string") {
+          const trimmed = node.trim();
+          if (trimmed) bucket.push(trimmed);
+          return;
+        }
+        if (typeof node === "number" || typeof node === "boolean") {
+          bucket.push(String(node));
+          return;
+        }
+        if (Array.isArray(node)) {
+          node.forEach((item) => gatherJsonStrings(item, bucket));
+          return;
+        }
+        if (node && typeof node === "object") {
+          Object.values(node).forEach((value) => gatherJsonStrings(value, bucket));
+        }
+      }
+
+      function parseCsvText(text) {
+        const lines = text.split(/\r?\n/).filter(Boolean);
+        if (!lines.length) return [];
+        const header = lines[0].split(",").map((x) => x.trim());
+        return lines.slice(1).map((line) => {
+          const cols = line.split(",").map((x) => x.trim());
+          return cols
+            .map((value, idx) => (header[idx] ? header[idx] + "=" + value : value))
+            .join(" | ");
+        });
+      }
+
+      async function readFileSignals(file) {
+        const name = file.name.toLowerCase();
+        const raw = await file.text();
+        if (name.endsWith(".json")) {
+          try {
+            const parsed = JSON.parse(raw);
+            const extracted = [];
+            gatherJsonStrings(parsed, extracted);
+            return extracted.map((line) => file.name + ": " + line);
+          } catch (error) {
+            return [file.name + ": invalid JSON (" + error.message + ")"];
+          }
+        }
+        if (name.endsWith(".csv")) {
+          return parseCsvText(raw).map((line) => file.name + ": " + line);
+        }
+        return splitIntoSignals(raw, file.name);
+      }
+
+      function signalWeight(signal) {
+        let weight = 1;
+        if (/\d+%/.test(signal)) weight += 1;
+        if (/\b(drop|churn|block|fail|slow|urgent|incident|error)\b/i.test(signal)) {
+          weight += 1;
+        }
+        return weight;
+      }
+
+      function scoreOpportunity(opp, signals) {
+        let score = 0;
+        const evidence = [];
+        const matched = new Set();
+
+        signals.forEach((signal) => {
+          const line = normalize(signal);
+          const hits = opp.keywords.filter((kw) => line.includes(kw.toLowerCase()));
+          if (!hits.length) return;
+          hits.forEach((kw) => matched.add(kw));
+          const weighted = hits.length * 3 + signalWeight(line);
+          score += weighted;
+          evidence.push({
+            text: signal,
+            keywords: hits,
+            weighted,
+          });
+        });
+
+        return {
+          ...opp,
+          score,
+          evidence,
+          matchedKeywords: Array.from(matched),
         };
-        const best = Object.entries(scores).sort((a, b) => b[1] - a[1])[0][0];
-        return templates[best];
       }
 
-      function renderList(id, values) {
-        document.getElementById(id).innerHTML = values
-          .map((value) => "<li>" + value + "</li>")
-          .join("");
-      }
-
-      function renderPills(id, groups) {
-        const html = groups
-          .map(
-            (group) =>
-              '<div class="pill"><strong>' +
-              group.label +
-              ":</strong> " +
-              group.items.join(", ") +
-              "</div>",
-          )
-          .join("");
-        document.getElementById(id).innerHTML = html;
-      }
-
-      function buildTasks(featureName, mode) {
-        const modeHint =
+      function buildTasks(name, mode) {
+        const modeTask =
           mode === "fast"
-            ? "Prioritize speed: ship prototype-level UI first."
+            ? "Ship prototype in one short loop, then refine from feedback."
             : mode === "safe"
-              ? "Prioritize reliability: include type-safe data and edge-case handling."
-              : "Balance speed and correctness in each increment.";
+              ? "Include full validation + edge-case handling before release."
+              : "Use iterative slices with quick demo checkpoints.";
         return [
-          "Create PRD draft for " + featureName + ".",
-          "Implement UI changes and connect state management.",
-          "Add data model migration + event tracking.",
-          "Add workflow orchestration and acceptance tests.",
-          modeHint,
+          "Draft product spec and acceptance criteria for " + name + ".",
+          "Implement UI surface and interaction states.",
+          "Implement data model/events and analytics instrumentation.",
+          "Implement workflow orchestration and permissions.",
+          "Add tests + rollout checklist + telemetry validation.",
+          modeTask,
         ];
       }
 
-      function generate() {
-        const interviews = document.getElementById("interviews").value.trim();
-        const usage = document.getElementById("usage").value.trim();
-        const market = document.getElementById("market").value.trim();
-        const mode = document.getElementById("mode").value;
-        const combined = [interviews, usage, market].join(" ");
-        const template = detectTheme(combined);
-
-        const signals = [...splitSignals(interviews), ...splitSignals(usage), ...splitSignals(market)].slice(0, 5);
-        const tasks = buildTasks(template.name, mode);
-
-        document.getElementById("featureName").textContent = template.name;
-        document.getElementById("problem").textContent = template.problem;
-        renderList("whyNow", signals.length ? signals : ["No signals provided."]);
-        renderPills("changes", [
-          { label: "UI", items: template.ui },
-          { label: "Data", items: template.data },
-          { label: "Workflow", items: template.workflow },
-        ]);
-        renderList("tasks", tasks);
-
-        const prompt =
-          "You are coding the feature '" +
-          template.name +
-          "'.\n" +
-          "Mode: " +
-          mode +
-          ".\n" +
-          "Problem: " +
-          template.problem +
-          "\n" +
-          "Required UI: " +
-          template.ui.join("; ") +
-          "\n" +
-          "Required data model: " +
-          template.data.join("; ") +
-          "\n" +
-          "Workflow: " +
-          template.workflow.join("; ") +
-          "\n" +
-          "Tasks:\n- " +
-          tasks.join("\n- ") +
-          "\n" +
-          "Return code changes + test plan + rollout notes.";
-        document.getElementById("promptOutput").textContent = prompt;
+      function toConfidence(score) {
+        if (score <= 0) return 25;
+        return Math.min(95, 35 + score);
       }
 
-      document.getElementById("generateBtn").addEventListener("click", generate);
-      generate();
+      function buildPrompt(result, mode, question) {
+        return [
+          "Question: " + question,
+          "You are implementing: " + result.name,
+          "Mode: " + mode,
+          "Problem: " + result.problem,
+          "UI changes: " + result.ui.join("; "),
+          "Data model changes: " + result.data.join("; "),
+          "Workflow changes: " + result.workflow.join("; "),
+          "Evidence:",
+          ...result.evidence.slice(0, 6).map((e) => "- " + e.text),
+          "Tasks:",
+          ...result.tasks.map((t) => "- " + t),
+          "Return: code diff, tests, rollout plan, and risks.",
+        ].join("\n");
+      }
+
+      function renderList(id, items) {
+        document.getElementById(id).innerHTML = (items || [])
+          .map((item) => "<li>" + item + "</li>")
+          .join("");
+      }
+
+      function renderRanking(rows) {
+        document.getElementById("rankingTable").innerHTML = rows
+          .map((row) => {
+            return (
+              "<tr><td>" +
+              row.name +
+              "</td><td>" +
+              row.score +
+              "</td><td>" +
+              row.evidence.length +
+              "</td><td>" +
+              (row.matchedKeywords.slice(0, 6).join(", ") || "-") +
+              "</td></tr>"
+            );
+          })
+          .join("");
+      }
+
+      function downloadText(filename, text, type) {
+        const blob = new Blob([text], { type: type || "text/plain;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+
+      function getHistory() {
+        try {
+          const raw = localStorage.getItem(HISTORY_KEY);
+          const parsed = raw ? JSON.parse(raw) : [];
+          return Array.isArray(parsed) ? parsed : [];
+        } catch (error) {
+          return [];
+        }
+      }
+
+      function saveHistory(entry) {
+        const history = getHistory();
+        const next = [entry, ...history].slice(0, 10);
+        localStorage.setItem(HISTORY_KEY, JSON.stringify(next));
+        renderHistory();
+      }
+
+      function renderHistory() {
+        const history = getHistory();
+        const container = document.getElementById("historyList");
+        if (!history.length) {
+          container.innerHTML = '<div class="small">No saved runs yet.</div>';
+          return;
+        }
+        container.innerHTML = history
+          .map((item, idx) => {
+            return (
+              '<div class="history-item">' +
+              "<span>" +
+              item.timestamp +
+              " - " +
+              item.topName +
+              "</span>" +
+              '<button class="btn-secondary" data-load="' +
+              idx +
+              '">Load</button>' +
+              "</div>"
+            );
+          })
+          .join("");
+      }
+
+      function loadHistory(index) {
+        const history = getHistory();
+        const item = history[index];
+        if (!item) return;
+        latestResult = item.payload;
+        renderResult(latestResult);
+        status("Loaded saved run from history.");
+      }
+
+      function renderResult(payload) {
+        const top = payload.top;
+        document.getElementById("topName").textContent = top.name;
+        document.getElementById("topProblem").textContent = top.problem;
+        document.getElementById("metaChips").innerHTML =
+          '<span class="chip">Confidence: ' +
+          payload.confidence +
+          '%</span>' +
+          '<span class="chip">Signals: ' +
+          payload.signalCount +
+          "</span>" +
+          '<span class="chip">Mode: ' +
+          payload.mode +
+          "</span>";
+
+        renderList(
+          "evidenceList",
+          top.evidence.length
+            ? top.evidence.slice(0, 8).map((ev) => ev.text + " [" + ev.keywords.join(", ") + "]")
+            : ["No evidence matched. Add more specific signals."],
+        );
+        renderRanking(payload.ranking);
+        renderList("uiChanges", top.ui);
+        renderList("dataChanges", top.data);
+        renderList("workflowChanges", top.workflow);
+        renderList("taskList", top.tasks);
+        document.getElementById("promptOutput").textContent = payload.prompt;
+      }
+
+      function buildMarkdown(payload) {
+        const top = payload.top;
+        return [
+          "# Cursor PM Brief",
+          "",
+          "- Timestamp: " + payload.timestamp,
+          "- Question: " + payload.question,
+          "- Mode: " + payload.mode,
+          "- Confidence: " + payload.confidence + "%",
+          "",
+          "## Recommended Feature",
+          top.name,
+          "",
+          "## Problem",
+          top.problem,
+          "",
+          "## Evidence",
+          ...top.evidence.slice(0, 10).map((e) => "- " + e.text),
+          "",
+          "## UI Changes",
+          ...top.ui.map((x) => "- " + x),
+          "",
+          "## Data Changes",
+          ...top.data.map((x) => "- " + x),
+          "",
+          "## Workflow Changes",
+          ...top.workflow.map((x) => "- " + x),
+          "",
+          "## Delivery Tasks",
+          ...top.tasks.map((x) => "- " + x),
+          "",
+          "## Vibe Coding Prompt",
+          "```",
+          payload.prompt,
+          "```",
+        ].join("\n");
+      }
+
+      async function analyze() {
+        const question = document.getElementById("question").value.trim() || "What should we build next?";
+        const mode = document.getElementById("mode").value;
+        const interviews = splitIntoSignals(document.getElementById("interviews").value, "interview");
+        const usage = splitIntoSignals(document.getElementById("usage").value, "usage");
+        const market = splitIntoSignals(document.getElementById("market").value, "market");
+        const fileInput = document.getElementById("uploads");
+        const files = Array.from(fileInput.files || []);
+
+        status("Processing signals...");
+        const uploadedSignals = [];
+        for (const file of files) {
+          const fileSignals = await readFileSignals(file);
+          uploadedSignals.push(...fileSignals);
+        }
+        const signals = [...interviews, ...usage, ...market, ...uploadedSignals];
+        if (!signals.length) {
+          status("No signals found. Add text or upload files.");
+          return;
+        }
+
+        const ranking = opportunities
+          .map((opp) => scoreOpportunity(opp, signals))
+          .sort((a, b) => b.score - a.score);
+
+        const top = ranking[0];
+        top.tasks = buildTasks(top.name, mode);
+        const confidence = toConfidence(top.score);
+        const timestamp = new Date().toLocaleString();
+        const prompt = buildPrompt(top, mode, question);
+
+        const payload = {
+          timestamp,
+          question,
+          mode,
+          signalCount: signals.length,
+          confidence,
+          top,
+          ranking: ranking.map((item) => ({
+            name: item.name,
+            score: item.score,
+            evidence: item.evidence,
+            matchedKeywords: item.matchedKeywords,
+          })),
+          prompt,
+        };
+
+        latestResult = payload;
+        renderResult(payload);
+        saveHistory({
+          timestamp,
+          topName: top.name,
+          payload,
+        });
+        status("Recommendation generated from " + signals.length + " signals.");
+      }
+
+      document.getElementById("analyzeBtn").addEventListener("click", () => {
+        analyze().catch((error) => {
+          status("Failed to analyze: " + error.message);
+        });
+      });
+
+      document.getElementById("exportJsonBtn").addEventListener("click", () => {
+        if (!latestResult) {
+          status("Generate a recommendation before exporting.");
+          return;
+        }
+        downloadText(
+          "cursor-pm-brief.json",
+          JSON.stringify(latestResult, null, 2),
+          "application/json;charset=utf-8",
+        );
+        status("Exported JSON brief.");
+      });
+
+      document.getElementById("exportMdBtn").addEventListener("click", () => {
+        if (!latestResult) {
+          status("Generate a recommendation before exporting.");
+          return;
+        }
+        downloadText(
+          "cursor-pm-brief.md",
+          buildMarkdown(latestResult),
+          "text/markdown;charset=utf-8",
+        );
+        status("Exported Markdown brief.");
+      });
+
+      document.getElementById("historyList").addEventListener("click", (event) => {
+        const loadIndex = event.target.getAttribute("data-load");
+        if (loadIndex === null) return;
+        loadHistory(Number(loadIndex));
+      });
+
+      document.getElementById("clearHistoryBtn").addEventListener("click", () => {
+        localStorage.removeItem(HISTORY_KEY);
+        renderHistory();
+        status("Cleared saved history.");
+      });
+
+      renderHistory();
+      analyze().catch((error) => {
+        status("Failed to run initial analysis: " + error.message);
+      });
     </script>
   </body>
 </html>
