@@ -431,12 +431,137 @@ Q1 objective is activation and team planning velocity.
         },
       ];
 
+      const STOP_WORDS = new Set([
+        "about",
+        "above",
+        "after",
+        "again",
+        "also",
+        "because",
+        "before",
+        "being",
+        "between",
+        "could",
+        "every",
+        "from",
+        "have",
+        "into",
+        "just",
+        "more",
+        "most",
+        "over",
+        "that",
+        "their",
+        "there",
+        "these",
+        "this",
+        "those",
+        "very",
+        "what",
+        "when",
+        "where",
+        "which",
+        "with",
+        "would",
+        "users",
+        "user",
+        "team",
+        "teams",
+      ]);
+
+      const OPPORTUNITY_HINTS = {
+        "guided-activation": [
+          "onboard",
+          "activate",
+          "activation",
+          "signup",
+          "sign up",
+          "first",
+          "new user",
+          "adoption",
+          "setup",
+          "tutorial",
+        ],
+        "collab-copilot": [
+          "collabor",
+          "handoff",
+          "review",
+          "alignment",
+          "comment",
+          "workflow",
+          "shared",
+          "approval",
+          "planning",
+        ],
+        "insight-graph": [
+          "insight",
+          "metric",
+          "analytics",
+          "dashboard",
+          "data",
+          "evidence",
+          "trend",
+          "report",
+          "funnel",
+        ],
+        "quality-guardrails": [
+          "bug",
+          "error",
+          "crash",
+          "latency",
+          "incident",
+          "reliability",
+          "quality",
+          "failure",
+          "stability",
+          "risk",
+        ],
+      };
+
       function status(message) {
         document.getElementById("statusLine").textContent = message;
       }
 
       function normalize(text) {
         return (text || "").toLowerCase();
+      }
+
+      function tokenize(text) {
+        return normalize(text)
+          .split(/[^a-z0-9]+/)
+          .map((token) => token.trim())
+          .filter((token) => token.length >= 3 && !STOP_WORDS.has(token));
+      }
+
+      function toSnakeCase(text) {
+        return normalize(text).replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+      }
+
+      function toTitleCase(text) {
+        return (text || "")
+          .split(/\s+/)
+          .map((word) => (word ? word[0].toUpperCase() + word.slice(1).toLowerCase() : ""))
+          .join(" ")
+          .trim();
+      }
+
+      function summarizeSignal(signal, maxLength) {
+        const cleaned = String(signal || "").replace(/^[^:]+:\s*/, "").trim();
+        if (cleaned.length <= maxLength) return cleaned;
+        return cleaned.slice(0, maxLength - 1).trim() + "…";
+      }
+
+      function extractThemes(signals, limit) {
+        const counts = new Map();
+        signals.forEach((signal) => {
+          tokenize(signal).forEach((token) => {
+            counts.set(token, (counts.get(token) || 0) + 1);
+          });
+        });
+        return Array.from(counts.entries())
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, limit)
+          .map(([token]) => token);
       }
 
       function splitIntoSignals(text, prefix) {
@@ -482,12 +607,25 @@ Q1 objective is activation and team planning velocity.
         if (file && typeof file.text === "function") {
           return file.text();
         }
+        if (file && typeof file.arrayBuffer === "function") {
+          const buffer = await file.arrayBuffer();
+          return new TextDecoder().decode(buffer);
+        }
         if (typeof FileReader !== "undefined") {
           return new Promise((resolve, reject) => {
             const reader = new FileReader();
-            reader.onload = () => resolve(String(reader.result || ""));
-            reader.onerror = () =>
+            const timeout = setTimeout(
+              () => reject(new Error("Timed out reading uploaded file.")),
+              5000,
+            );
+            reader.onload = () => {
+              clearTimeout(timeout);
+              resolve(String(reader.result || ""));
+            };
+            reader.onerror = () => {
+              clearTimeout(timeout);
               reject(reader.error || new Error("Failed to read uploaded file."));
+            };
             reader.readAsText(file);
           });
         }
@@ -526,10 +664,17 @@ Q1 objective is activation and team planning velocity.
         let score = 0;
         const evidence = [];
         const matched = new Set();
+        const hints = OPPORTUNITY_HINTS[opp.id] || [];
 
         signals.forEach((signal) => {
           const line = normalize(signal);
-          const hits = opp.keywords.filter((kw) => line.includes(kw.toLowerCase()));
+          const lineTokens = new Set(tokenize(line));
+          const directHits = opp.keywords.filter((kw) => line.includes(kw.toLowerCase()));
+          const hintHits = hints.filter((hint) => line.includes(hint));
+          const tokenHits = opp.keywords.filter((kw) =>
+            tokenize(kw).some((token) => lineTokens.has(token)),
+          );
+          const hits = Array.from(new Set([...directHits, ...hintHits, ...tokenHits]));
           if (!hits.length) return;
           hits.forEach((kw) => matched.add(kw));
           const weighted = hits.length * 3 + signalWeight(line);
@@ -543,10 +688,114 @@ Q1 objective is activation and team planning velocity.
 
         return {
           ...opp,
+          ui: [...opp.ui],
+          data: [...opp.data],
+          workflow: [...opp.workflow],
           score,
           evidence,
           matchedKeywords: Array.from(matched),
         };
+      }
+
+      function buildEvidenceFallback(signals, themes, limit) {
+        const fallbackKeywords = themes.length ? themes : ["signal"];
+        return signals.slice(0, limit).map((signal) => ({
+          text: signal,
+          keywords: fallbackKeywords.slice(0, 3),
+          weighted: 2,
+        }));
+      }
+
+      function enrichTopOpportunity(base, signals, themes) {
+        const dynamicThemes = themes.length ? themes : ["workflow", "adoption"];
+        const themeLabel = dynamicThemes.slice(0, 2).map(toTitleCase).join(" + ");
+        const evidence = base.evidence.length
+          ? base.evidence
+          : buildEvidenceFallback(signals, dynamicThemes, 6);
+        const mainSummary = summarizeSignal(signals[0] || "", 120);
+        const supportingSummary = summarizeSignal(signals[1] || "", 120);
+
+        const ui = [...base.ui];
+        const data = [...base.data];
+        const workflow = [...base.workflow];
+        if (dynamicThemes[0]) {
+          ui.push(
+            'Focused UX guidance for "' +
+              dynamicThemes[0] +
+              '" signals to reduce user friction.',
+          );
+          data.push("theme_" + toSnakeCase(dynamicThemes[0]) + "_impact_events");
+        }
+        workflow.push("Review weekly signal deltas and re-score this opportunity.");
+
+        return {
+          ...base,
+          name: themeLabel ? base.name + " for " + themeLabel : base.name,
+          problem:
+            "Based on " +
+            signals.length +
+            " signals, the strongest pain points are: " +
+            mainSummary +
+            (supportingSummary ? " | " + supportingSummary : ""),
+          ui,
+          data,
+          workflow,
+          evidence,
+          score: Math.max(base.score, 4 + dynamicThemes.length * 2),
+          matchedKeywords: Array.from(
+            new Set([...(base.matchedKeywords || []), ...dynamicThemes]),
+          ),
+        };
+      }
+
+      function buildSignalDrivenOpportunity(signals, themes) {
+        const dynamicThemes = themes.length ? themes : ["activation", "clarity", "quality"];
+        const label = dynamicThemes.slice(0, 2).map(toTitleCase).join(" + ");
+        const mainTheme = dynamicThemes[0];
+        return {
+          id: "signal-driven-opportunity",
+          name: "Signal-Driven Opportunity: " + label,
+          problem:
+            "Input data shows repeated friction around " +
+            dynamicThemes.slice(0, 3).join(", ") +
+            ". Build a focused feature to address this evidence directly.",
+          keywords: [...dynamicThemes],
+          ui: [
+            "Introduce guided interactions around " + mainTheme + ".",
+            "Show in-product context for affected users and steps.",
+          ],
+          data: [
+            "signal_driven_opportunity_score",
+            "theme_" + toSnakeCase(mainTheme) + "_events",
+            "time_to_resolution",
+          ],
+          workflow: [
+            "Ingest fresh signals -> ship targeted iteration -> measure outcome impact",
+          ],
+          score: 6 + dynamicThemes.length * 2,
+          evidence: buildEvidenceFallback(signals, dynamicThemes, 8),
+          matchedKeywords: dynamicThemes,
+        };
+      }
+
+      function ensureEvidenceCoverage(evidence, signals, themes) {
+        const next = [...(evidence || [])];
+        const seen = new Set(next.map((item) => item.text));
+        const fallbackKeywords = themes.length ? themes.slice(0, 3) : ["signal"];
+        const uploaded = signals.filter((signal) => /\.[a-z0-9]+:\s/i.test(signal));
+        const ordered = [...uploaded, ...signals];
+
+        ordered.forEach((signal) => {
+          if (next.length >= 10) return;
+          if (seen.has(signal)) return;
+          next.push({
+            text: signal,
+            keywords: fallbackKeywords,
+            weighted: 1,
+          });
+          seen.add(signal);
+        });
+        return next;
       }
 
       function buildTasks(name, mode) {
@@ -677,6 +926,9 @@ Q1 objective is activation and team planning velocity.
         const top = payload.top;
         document.getElementById("topName").textContent = top.name;
         document.getElementById("topProblem").textContent = top.problem;
+        const themeChip = payload.themes && payload.themes.length
+          ? '<span class="chip">Themes: ' + payload.themes.slice(0, 3).join(", ") + "</span>"
+          : "";
         document.getElementById("metaChips").innerHTML =
           '<span class="chip">Confidence: ' +
           payload.confidence +
@@ -686,7 +938,8 @@ Q1 objective is activation and team planning velocity.
           "</span>" +
           '<span class="chip">Mode: ' +
           payload.mode +
-          "</span>";
+          "</span>" +
+          themeChip;
 
         renderList(
           "evidenceList",
@@ -711,6 +964,7 @@ Q1 objective is activation and team planning velocity.
           "- Question: " + payload.question,
           "- Mode: " + payload.mode,
           "- Confidence: " + payload.confidence + "%",
+          "- Themes: " + (payload.themes && payload.themes.length ? payload.themes.join(", ") : "n/a"),
           "",
           "## Recommended Feature",
           top.name,
@@ -761,13 +1015,23 @@ Q1 objective is activation and team planning velocity.
           return;
         }
 
-        const ranking = opportunities
+        const themes = extractThemes(signals, 5);
+        let ranking = opportunities
           .map((opp) => scoreOpportunity(opp, signals))
           .sort((a, b) => b.score - a.score);
 
-        const top = ranking[0];
+        let top = ranking[0];
+        if (!top || top.score <= 0) {
+          top = buildSignalDrivenOpportunity(signals, themes);
+          ranking = [top, ...ranking];
+        } else {
+          top = enrichTopOpportunity(top, signals, themes);
+          ranking = [top, ...ranking.slice(1)];
+        }
+
+        top.evidence = ensureEvidenceCoverage(top.evidence, signals, themes);
         top.tasks = buildTasks(top.name, mode);
-        const confidence = toConfidence(top.score);
+        const confidence = toConfidence(top.score + Math.min(8, top.evidence.length));
         const timestamp = new Date().toLocaleString();
         const prompt = buildPrompt(top, mode, question);
 
@@ -777,8 +1041,9 @@ Q1 objective is activation and team planning velocity.
           mode,
           signalCount: signals.length,
           confidence,
+          themes,
           top,
-          ranking: ranking.map((item) => ({
+          ranking: ranking.slice(0, 6).map((item) => ({
             name: item.name,
             score: item.score,
             evidence: item.evidence,
@@ -796,6 +1061,37 @@ Q1 objective is activation and team planning velocity.
         });
         status("Recommendation generated from " + signals.length + " signals.");
       }
+
+      function debounce(fn, wait) {
+        let timer = null;
+        return (...args) => {
+          if (timer) clearTimeout(timer);
+          timer = setTimeout(() => fn(...args), wait);
+        };
+      }
+
+      const scheduleAnalyze = debounce(() => {
+        analyze().catch((error) => {
+          status("Failed to analyze: " + error.message);
+        });
+      }, 450);
+
+      ["question", "interviews", "usage", "market"].forEach((id) => {
+        document.getElementById(id).addEventListener("input", () => {
+          status("Input updated. Re-analyzing...");
+          scheduleAnalyze();
+        });
+      });
+      document.getElementById("mode").addEventListener("change", () => {
+        status("Mode changed. Re-analyzing...");
+        scheduleAnalyze();
+      });
+      document.getElementById("uploads").addEventListener("change", () => {
+        status("Files added. Re-analyzing...");
+        analyze().catch((error) => {
+          status("Failed to analyze: " + error.message);
+        });
+      });
 
       document.getElementById("analyzeBtn").addEventListener("click", () => {
         analyze().catch((error) => {

@@ -6,6 +6,7 @@ By Andrew Miklas
 This repository now includes a working product tool in `index.html` that supports:
 - text input for interviews, usage, and market context,
 - file ingestion (`.txt`, `.md`, `.csv`, `.json`) for additional evidence,
+- input-reactive recommendations (different signals produce different feature direction),
 - ranked opportunity scoring with matched-keyword evidence traceability,
 - generated UI/data/workflow changes and coding-agent delivery tasks,
 - vibe-coding prompt generation,
