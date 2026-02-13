@@ -5,7 +5,12 @@
   "description": "Local AI-native PM recommendation tool with model router failover",
   "scripts": {
     "start": "node server.js",
-    "start:dev": "node server.js"
+    "start:dev": "node server.js",
+    "worker:dev": "wrangler dev",
+    "worker:deploy": "wrangler deploy",
+    "worker:secret:list": "wrangler secret list --name codeathon-ai-router",
+    "worker:secret:check": "powershell -ExecutionPolicy Bypass -File scripts\\cloudflare-secrets-check.ps1 -WorkerName codeathon-ai-router",
+    "worker:secret:setup": "powershell -ExecutionPolicy Bypass -File scripts\\cloudflare-secrets.ps1 -WorkerName codeathon-ai-router"
   },
   "engines": {
     "node": ">=20"

@@ -1,0 +1,8 @@
+name = "codeathon-ai-router"
+main = "worker/index.js"
+compatibility_date = "2025-01-15"
+workers_dev = true
+
+[vars]
+DEFAULT_MODE = "balanced"
+OLLAMA_ENABLED = "false"

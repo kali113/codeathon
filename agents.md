@@ -7,6 +7,7 @@ This project defines an AI-native workflow for product management: turning raw c
 - The live working interface is in `index.html`.
 - It supports text + file input ingestion, evidence-linked opportunity ranking, delivery-task generation, and vibe-coding prompt export.
 - `server.js` adds a model router and context system for AI-backed recommendations with provider failover on rate limits.
+- `worker/index.js` provides a Cloudflare Worker deployment path using Wrangler secrets for provider keys.
 
 ## Core Agent Roles
 

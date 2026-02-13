@@ -23,6 +23,19 @@ This repository now includes a working product tool in `index.html` that support
 3. Open: `http://localhost:3000`
 4. Add or upload signals and click **Analyze and recommend**
 
+## Cloudflare Worker (secret-safe setup)
+This repo includes a Worker router (`worker/index.js`) and Wrangler config (`wrangler.toml`) so you can keep keys out of client code.
+
+1. Deploy the Worker:
+   - `npm run worker:deploy`
+2. Check whether secrets are present:
+   - `npm run worker:secret:list`
+   - `npm run worker:secret:check`
+3. Set secrets locally (interactive; values are never committed):
+   - `npm run worker:secret:setup`
+4. Optional: set a browser override for router URL in dev console:
+   - `localStorage.setItem('cursor_pm_router_url', 'https://codeathon-ai-router.<your-subdomain>.workers.dev')`
+
 Over the last few years, we've seen an explosion of AI tools for writing code. Cursor and Claude Code are great at helping teams build software once it's clear what needs to be built.
 
 But writing code is only part of building a product people want. The most important part is figuring out what to build in the first place.

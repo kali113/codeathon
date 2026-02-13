@@ -1220,6 +1220,18 @@ Q1 objective is activation and team planning velocity.
 
       function getApiTargets() {
         const targets = [];
+        const globalOverride = normalizeText(window.CURSOR_PM_ROUTER_URL || "");
+        if (globalOverride) {
+          targets.push(globalOverride);
+        }
+        try {
+          const storedOverride = normalizeText(localStorage.getItem("cursor_pm_router_url"));
+          if (storedOverride) {
+            targets.push(storedOverride);
+          }
+        } catch (_error) {
+          // no-op: localStorage can be unavailable in restricted runtimes
+        }
         if (window.location && /^https?:$/i.test(window.location.protocol)) {
           targets.push(window.location.origin);
         }
