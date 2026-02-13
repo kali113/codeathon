@@ -3,6 +3,10 @@
 ## Purpose
 This project defines an AI-native workflow for product management: turning raw customer signal into implementation-ready work that coding agents can execute.
 
+## MVP Implementation
+- The live MVP interface is in `index.html`.
+- It demonstrates discovery input ingestion, prioritization output, task breakdown, and vibe-coding prompt generation.
+
 ## Core Agent Roles
 
 ### 1) Discovery Agent

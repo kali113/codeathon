@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Cursor for Product Managers — MVP</title>
+    <style>
+      :root {
+        --bg: #0f172a;
+        --panel: #111827;
+        --card: #1f2937;
+        --text: #e5e7eb;
+        --muted: #9ca3af;
+        --accent: #22d3ee;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: Inter, Segoe UI, Arial, Helvetica, sans-serif;
+        background: linear-gradient(180deg, #020617, #0f172a);
+        color: var(--text);
+      }
+      .wrap {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 24px 16px 40px;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 2rem;
+      }
+      .subtitle {
+        margin: 0 0 20px;
+        color: var(--muted);
+      }
+      .grid {
+        display: grid;
+        gap: 16px;
+      }
+      @media (min-width: 980px) {
+        .grid {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+      .card {
+        background: rgba(17, 24, 39, 0.9);
+        border: 1px solid #374151;
+        border-radius: 12px;
+        padding: 16px;
+      }
+      .card h2 {
+        margin: 0 0 12px;
+        font-size: 1.1rem;
+      }
+      label {
+        display: block;
+        margin: 12px 0 6px;
+        font-weight: 600;
+      }
+      textarea,
+      select {
+        width: 100%;
+        border: 1px solid #4b5563;
+        border-radius: 8px;
+        background: #111827;
+        color: var(--text);
+        padding: 10px;
+      }
+      textarea {
+        min-height: 96px;
+        resize: vertical;
+      }
+      button {
+        border: 0;
+        border-radius: 8px;
+        background: var(--accent);
+        color: #03131a;
+        font-weight: 700;
+        padding: 10px 14px;
+        cursor: pointer;
+        margin-top: 14px;
+      }
+      .result-title {
+        margin: 0;
+        color: var(--accent);
+      }
+      .pill {
+        display: inline-block;
+        border: 1px solid #4b5563;
+        border-radius: 999px;
+        padding: 4px 10px;
+        color: var(--muted);
+        margin: 4px 6px 0 0;
+        font-size: 12px;
+      }
+      ul {
+        margin: 8px 0;
+        padding-left: 20px;
+      }
+      pre {
+        white-space: pre-wrap;
+        background: #020617;
+        border: 1px solid #334155;
+        border-radius: 8px;
+        padding: 12px;
+        margin: 8px 0 0;
+      }
+      .row {
+        margin-top: 12px;
+      }
+      .muted {
+        color: var(--muted);
+      }
+      footer {
+        margin-top: 16px;
+        color: var(--muted);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>Cursor for Product Managers</h1>
+      <p class="subtitle">
+        MVP project: upload customer signal, ask what to build next, and get a
+        product spec + coding-agent task plan with vibe-coding prompts.
+      </p>
+
+      <div class="grid">
+        <section class="card">
+          <h2>1) Discovery Inputs</h2>
+          <label for="interviews">Customer interviews</label>
+          <textarea id="interviews">
+Users say onboarding takes too long and they do not know the first action.
+Power users ask for faster collaboration loops in planning sessions.</textarea
+          >
+
+          <label for="usage">Usage data signals</label>
+          <textarea id="usage">
+42% of new users leave before creating their first project.
+Teams with shared templates retain 2x longer than teams without templates.</textarea
+          >
+
+          <label for="market">Market and strategy context</label>
+          <textarea id="market">
+Competitors win on fast setup and guided workflows.
+Goal for Q1 is activation and collaborative planning velocity.</textarea
+          >
+
+          <label for="mode">Vibe coding mode</label>
+          <select id="mode">
+            <option value="balanced">Balanced</option>
+            <option value="safe">Safe / production-first</option>
+            <option value="fast">Fast / prototype-first</option>
+          </select>
+
+          <button id="generateBtn">Generate next feature</button>
+        </section>
+
+        <section class="card">
+          <h2>2) Generated Product Direction</h2>
+          <h3 class="result-title" id="featureName">No feature generated yet</h3>
+          <p class="muted" id="problem"></p>
+
+          <div class="row">
+            <strong>Why this now</strong>
+            <ul id="whyNow"></ul>
+          </div>
+
+          <div class="row">
+            <strong>Proposed changes</strong>
+            <div id="changes"></div>
+          </div>
+
+          <div class="row">
+            <strong>Coding-agent tasks</strong>
+            <ul id="tasks"></ul>
+          </div>
+        </section>
+      </div>
+
+      <section class="card" style="margin-top: 16px">
+        <h2>3) Vibe Coding Prompt</h2>
+        <p class="muted">
+          Use this directly with your coding agent for rapid prototype loops.
+        </p>
+        <pre id="promptOutput">Generate a feature first to create a prompt.</pre>
+      </section>
+
+      <footer>
+        Local run: <code>python -m http.server 8000</code> and open
+        <code>http://localhost:8000</code>.
+      </footer>
+    </div>
+
+    <script>
+      const templates = {
+        onboarding: {
+          name: "Guided First Project Builder",
+          problem:
+            "New users churn before activation because first value is unclear.",
+          ui: ["Interactive checklist on first login", "Contextual next-step CTA"],
+          data: ["onboarding_steps", "activation_progress_events"],
+          workflow: ["Interview -> setup wizard -> first shared artifact"],
+        },
+        collaboration: {
+          name: "Live Planning Co-Pilot",
+          problem:
+            "Teams need faster shared planning loops with fewer handoff delays.",
+          ui: ["Shared planning room", "Inline AI suggestions per section"],
+          data: ["room_sessions", "suggestion_acceptance_events"],
+          workflow: ["Draft -> review live -> approve implementation tasks"],
+        },
+        analytics: {
+          name: "PM Insight Dashboard",
+          problem:
+            "Product teams cannot quickly connect customer feedback with usage trends.",
+          ui: ["Signal trend board", "Issue-to-metric evidence panel"],
+          data: ["signal_clusters", "opportunity_scores"],
+          workflow: ["Ingest signals -> score opportunities -> decide sprint focus"],
+        },
+      };
+
+      function splitSignals(text) {
+        return text
+          .split(/\n+/)
+          .map((line) => line.trim())
+          .filter(Boolean);
+      }
+
+      function detectTheme(allText) {
+        const text = allText.toLowerCase();
+        const scores = {
+          onboarding: (text.match(/onboarding|activate|first/i) || []).length,
+          collaboration: (text.match(/collab|team|shared|planning/i) || []).length,
+          analytics: (text.match(/metric|data|insight|dashboard|trend/i) || [])
+            .length,
+        };
+        const best = Object.entries(scores).sort((a, b) => b[1] - a[1])[0][0];
+        return templates[best];
+      }
+
+      function renderList(id, values) {
+        document.getElementById(id).innerHTML = values
+          .map((value) => "<li>" + value + "</li>")
+          .join("");
+      }
+
+      function renderPills(id, groups) {
+        const html = groups
+          .map(
+            (group) =>
+              '<div class="pill"><strong>' +
+              group.label +
+              ":</strong> " +
+              group.items.join(", ") +
+              "</div>",
+          )
+          .join("");
+        document.getElementById(id).innerHTML = html;
+      }
+
+      function buildTasks(featureName, mode) {
+        const modeHint =
+          mode === "fast"
+            ? "Prioritize speed: ship prototype-level UI first."
+            : mode === "safe"
+              ? "Prioritize reliability: include type-safe data and edge-case handling."
+              : "Balance speed and correctness in each increment.";
+        return [
+          "Create PRD draft for " + featureName + ".",
+          "Implement UI changes and connect state management.",
+          "Add data model migration + event tracking.",
+          "Add workflow orchestration and acceptance tests.",
+          modeHint,
+        ];
+      }
+
+      function generate() {
+        const interviews = document.getElementById("interviews").value.trim();
+        const usage = document.getElementById("usage").value.trim();
+        const market = document.getElementById("market").value.trim();
+        const mode = document.getElementById("mode").value;
+        const combined = [interviews, usage, market].join(" ");
+        const template = detectTheme(combined);
+
+        const signals = [...splitSignals(interviews), ...splitSignals(usage), ...splitSignals(market)].slice(0, 5);
+        const tasks = buildTasks(template.name, mode);
+
+        document.getElementById("featureName").textContent = template.name;
+        document.getElementById("problem").textContent = template.problem;
+        renderList("whyNow", signals.length ? signals : ["No signals provided."]);
+        renderPills("changes", [
+          { label: "UI", items: template.ui },
+          { label: "Data", items: template.data },
+          { label: "Workflow", items: template.workflow },
+        ]);
+        renderList("tasks", tasks);
+
+        const prompt =
+          "You are coding the feature '" +
+          template.name +
+          "'.\n" +
+          "Mode: " +
+          mode +
+          ".\n" +
+          "Problem: " +
+          template.problem +
+          "\n" +
+          "Required UI: " +
+          template.ui.join("; ") +
+          "\n" +
+          "Required data model: " +
+          template.data.join("; ") +
+          "\n" +
+          "Workflow: " +
+          template.workflow.join("; ") +
+          "\n" +
+          "Tasks:\n- " +
+          tasks.join("\n- ") +
+          "\n" +
+          "Return code changes + test plan + rollout notes.";
+        document.getElementById("promptOutput").textContent = prompt;
+      }
+
+      document.getElementById("generateBtn").addEventListener("click", generate);
+      generate();
+    </script>
+  </body>
+</html>

@@ -2,6 +2,19 @@
 
 By Andrew Miklas
 
+## Project MVP (Created)
+This repository now includes a working MVP project in `index.html` that turns customer signal into:
+- a suggested feature to build next,
+- an evidence-backed rationale,
+- proposed UI/data/workflow changes,
+- coding-agent tasks,
+- and a vibe-coding prompt you can run directly.
+
+## Run locally
+1. From this folder, run: `python -m http.server 8000`
+2. Open: `http://localhost:8000`
+3. Use the discovery inputs and click **Generate next feature**
+
 Over the last few years, we've seen an explosion of AI tools for writing code. Cursor and Claude Code are great at helping teams build software once it's clear what needs to be built.
 
 But writing code is only part of building a product people want. The most important part is figuring out what to build in the first place.
