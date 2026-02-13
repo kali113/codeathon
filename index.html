@@ -246,6 +246,7 @@ Q1 objective is activation and team planning velocity.
             <h3 id="topName">No recommendation generated</h3>
             <div class="small" id="topProblem">Run analysis to generate output.</div>
             <div class="chips" id="metaChips"></div>
+            <div class="small" id="confidenceNote"></div>
           </article>
 
           <article class="card">
@@ -311,6 +312,8 @@ Q1 objective is activation and team planning velocity.
     <script>
       const HISTORY_KEY = "cursor_pm_runs_v2";
       let latestResult = null;
+      let isAnalyzing = false;
+      let analysisRunCount = 0;
 
       const opportunities = [
         {
@@ -702,7 +705,7 @@ Q1 objective is activation and team planning velocity.
         return signals.slice(0, limit).map((signal) => ({
           text: signal,
           keywords: fallbackKeywords.slice(0, 3),
-          weighted: 2,
+          weighted: 1,
         }));
       }
 
@@ -815,9 +818,77 @@ Q1 objective is activation and team planning velocity.
         ];
       }
 
-      function toConfidence(score) {
-        if (score <= 0) return 25;
-        return Math.min(95, 35 + score);
+      function clampNumber(value, min, max) {
+        return Math.min(max, Math.max(min, value));
+      }
+
+      function getConfidenceLabel(score) {
+        if (score >= 82) return "High";
+        if (score >= 68) return "Medium";
+        return "Low";
+      }
+
+      function computeConfidence(top, ranking, signals, themes, matchedEvidence) {
+        const second = ranking[1];
+        const evidence = matchedEvidence || [];
+        const signalVolume = clampNumber(signals.length / 14, 0, 1);
+        const weightedEvidence = evidence.reduce(
+          (sum, item) => sum + Math.max(0, Number(item.weighted) || 0),
+          0,
+        );
+        const evidenceDensity = signals.length
+          ? clampNumber(
+              evidence.filter((item) => (Number(item.weighted) || 0) > 1).length /
+                signals.length,
+              0,
+              1,
+            )
+          : 0;
+        const evidenceStrength = signals.length
+          ? clampNumber(
+              (weightedEvidence / Math.max(1, signals.length * 6)) * 0.7 +
+                evidenceDensity * 0.3,
+              0,
+              1,
+            )
+          : 0;
+        const separation = second
+          ? clampNumber(
+              ((top.score - second.score) / Math.max(1, top.score)) *
+                clampNumber(top.score / 35, 0, 1),
+              0,
+              1,
+            )
+          : clampNumber(top.score / 40, 0, 1);
+        const specificity = clampNumber(top.matchedKeywords.length / 8, 0, 1);
+        const themeStrength = clampNumber((themes || []).length / 5, 0, 1);
+
+        const blended =
+          signalVolume * 0.2 +
+          evidenceStrength * 0.4 +
+          separation * 0.2 +
+          specificity * 0.15 +
+          themeStrength * 0.05;
+        const score = clampNumber(Math.round(18 + blended * 77), 18, 95);
+
+        const reasons = [
+          "Evidence strength " + Math.round(evidenceStrength * 100) + "%",
+          "Top-vs-next separation " + Math.round(separation * 100) + "%",
+          "Signal volume " + signals.length,
+        ];
+
+        return {
+          score,
+          label: getConfidenceLabel(score),
+          reasons,
+          metrics: {
+            signalVolume,
+            evidenceStrength,
+            separation,
+            specificity,
+            themeStrength,
+          },
+        };
       }
 
       function buildPrompt(result, mode, question) {
@@ -932,7 +1003,9 @@ Q1 objective is activation and team planning velocity.
         document.getElementById("metaChips").innerHTML =
           '<span class="chip">Confidence: ' +
           payload.confidence +
-          '%</span>' +
+          "% (" +
+          (payload.confidenceLabel || "n/a") +
+          ")</span>" +
           '<span class="chip">Signals: ' +
           payload.signalCount +
           "</span>" +
@@ -940,6 +1013,10 @@ Q1 objective is activation and team planning velocity.
           payload.mode +
           "</span>" +
           themeChip;
+        document.getElementById("confidenceNote").textContent =
+          payload.confidenceReasons && payload.confidenceReasons.length
+            ? "Confidence basis: " + payload.confidenceReasons.join(" | ")
+            : "";
 
         renderList(
           "evidenceList",
@@ -963,7 +1040,8 @@ Q1 objective is activation and team planning velocity.
           "- Timestamp: " + payload.timestamp,
           "- Question: " + payload.question,
           "- Mode: " + payload.mode,
-          "- Confidence: " + payload.confidence + "%",
+          "- Confidence: " + payload.confidence + "% (" + (payload.confidenceLabel || "n/a") + ")",
+          "- Confidence basis: " + (payload.confidenceReasons && payload.confidenceReasons.length ? payload.confidenceReasons.join(", ") : "n/a"),
           "- Themes: " + (payload.themes && payload.themes.length ? payload.themes.join(", ") : "n/a"),
           "",
           "## Recommended Feature",
@@ -995,71 +1073,104 @@ Q1 objective is activation and team planning velocity.
       }
 
       async function analyze() {
-        const question = document.getElementById("question").value.trim() || "What should we build next?";
-        const mode = document.getElementById("mode").value;
-        const interviews = splitIntoSignals(document.getElementById("interviews").value, "interview");
-        const usage = splitIntoSignals(document.getElementById("usage").value, "usage");
-        const market = splitIntoSignals(document.getElementById("market").value, "market");
-        const fileInput = document.getElementById("uploads");
-        const files = Array.from(fileInput.files || []);
-
-        status("Processing signals...");
-        const uploadedSignals = [];
-        for (const file of files) {
-          const fileSignals = await readFileSignals(file);
-          uploadedSignals.push(...fileSignals);
-        }
-        const signals = [...interviews, ...usage, ...market, ...uploadedSignals];
-        if (!signals.length) {
-          status("No signals found. Add text or upload files.");
+        if (isAnalyzing) {
+          status("Still processing previous analysis...");
           return;
         }
 
-        const themes = extractThemes(signals, 5);
-        let ranking = opportunities
-          .map((opp) => scoreOpportunity(opp, signals))
-          .sort((a, b) => b.score - a.score);
+        const analyzeButton = document.getElementById("analyzeBtn");
+        const initialButtonText = analyzeButton.textContent;
+        isAnalyzing = true;
+        analyzeButton.disabled = true;
+        analyzeButton.textContent = "Analyzing...";
 
-        let top = ranking[0];
-        if (!top || top.score <= 0) {
-          top = buildSignalDrivenOpportunity(signals, themes);
-          ranking = [top, ...ranking];
-        } else {
-          top = enrichTopOpportunity(top, signals, themes);
-          ranking = [top, ...ranking.slice(1)];
+        try {
+          const question =
+            document.getElementById("question").value.trim() || "What should we build next?";
+          const mode = document.getElementById("mode").value;
+          const interviews = splitIntoSignals(
+            document.getElementById("interviews").value,
+            "interview",
+          );
+          const usage = splitIntoSignals(document.getElementById("usage").value, "usage");
+          const market = splitIntoSignals(document.getElementById("market").value, "market");
+          const fileInput = document.getElementById("uploads");
+          const files = Array.from(fileInput.files || []);
+
+          status("Processing signals...");
+          const uploadedSignals = [];
+          for (const file of files) {
+            const fileSignals = await readFileSignals(file);
+            uploadedSignals.push(...fileSignals);
+          }
+          const signals = [...interviews, ...usage, ...market, ...uploadedSignals];
+          if (!signals.length) {
+            status("No signals found. Add text or upload files.");
+            return;
+          }
+
+          const themes = extractThemes(signals, 5);
+          let ranking = opportunities
+            .map((opp) => scoreOpportunity(opp, signals))
+            .sort((a, b) => b.score - a.score);
+
+          let top = ranking[0];
+          if (!top || top.score <= 0) {
+            top = buildSignalDrivenOpportunity(signals, themes);
+            ranking = [top, ...ranking];
+          } else {
+            top = enrichTopOpportunity(top, signals, themes);
+            ranking = [top, ...ranking.slice(1)];
+          }
+
+          const matchedEvidence = [...top.evidence];
+          top.evidence = ensureEvidenceCoverage(top.evidence, signals, themes);
+          top.tasks = buildTasks(top.name, mode);
+          const confidence = computeConfidence(top, ranking, signals, themes, matchedEvidence);
+          const timestamp = new Date().toLocaleString();
+          const prompt = buildPrompt(top, mode, question);
+
+          const payload = {
+            timestamp,
+            question,
+            mode,
+            signalCount: signals.length,
+            confidence: confidence.score,
+            confidenceLabel: confidence.label,
+            confidenceReasons: confidence.reasons,
+            themes,
+            top,
+            ranking: ranking.slice(0, 6).map((item) => ({
+              name: item.name,
+              score: item.score,
+              evidence: item.evidence,
+              matchedKeywords: item.matchedKeywords,
+            })),
+            prompt,
+          };
+
+          latestResult = payload;
+          renderResult(payload);
+          saveHistory({
+            timestamp,
+            topName: top.name,
+            payload,
+          });
+          analysisRunCount += 1;
+          status(
+            "Recommendation generated from " +
+              signals.length +
+              " signals (run #" +
+              analysisRunCount +
+              " at " +
+              new Date().toLocaleTimeString() +
+              ").",
+          );
+        } finally {
+          isAnalyzing = false;
+          analyzeButton.disabled = false;
+          analyzeButton.textContent = initialButtonText;
         }
-
-        top.evidence = ensureEvidenceCoverage(top.evidence, signals, themes);
-        top.tasks = buildTasks(top.name, mode);
-        const confidence = toConfidence(top.score + Math.min(8, top.evidence.length));
-        const timestamp = new Date().toLocaleString();
-        const prompt = buildPrompt(top, mode, question);
-
-        const payload = {
-          timestamp,
-          question,
-          mode,
-          signalCount: signals.length,
-          confidence,
-          themes,
-          top,
-          ranking: ranking.slice(0, 6).map((item) => ({
-            name: item.name,
-            score: item.score,
-            evidence: item.evidence,
-            matchedKeywords: item.matchedKeywords,
-          })),
-          prompt,
-        };
-
-        latestResult = payload;
-        renderResult(payload);
-        saveHistory({
-          timestamp,
-          topName: top.name,
-          payload,
-        });
-        status("Recommendation generated from " + signals.length + " signals.");
       }
 
       function debounce(fn, wait) {
