@@ -17,3 +17,6 @@ We think there's an opportunity to build a "Cursor for product management": an A
 As agents increasingly take the first pass at implementation, the way we define and communicate "what to build" needs to change.
 
 If you're building in this space, we'd love to hear from you.
+
+## Also a Vibe Coding Tool
+This should also operate as a vibe coding tool: teams can express product intent in natural language, generate fast end-to-end prototypes, and iterate in a tight prompt-build-feedback loop before promoting validated work into structured delivery tasks.

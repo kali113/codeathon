@@ -30,12 +30,17 @@ This project defines an AI-native workflow for product management: turning raw c
 - Responsibilities: compare outcomes against expected impact and detect regressions/gaps.
 - Outputs: post-release findings and next-iteration recommendations.
 
+### 6) Vibe Coding Agent
+- Inputs: natural-language product intent, existing code context, and fast feedback from users or teammates.
+- Responsibilities: rapidly produce and refine prototype-level product changes through prompt-driven coding loops while preserving core product constraints.
+- Outputs: prototype diffs, prompt history, and a tightened implementation direction for production agents.
+
 ## Standard Execution Loop
 1. Collect and normalize discovery inputs.
 2. Synthesize insights into evidence-backed opportunities.
 3. Prioritize what should be built next.
 4. Generate clear product specs and delivery tasks.
-5. Hand tasks to coding agents for implementation.
+5. Hand tasks to coding agents for implementation, using vibe-coding loops when rapid prototyping is the goal.
 6. Validate results and feed new learning back into discovery.
 
 ## Definition of Done
